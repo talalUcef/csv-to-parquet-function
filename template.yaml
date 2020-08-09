@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >-
+  An Amazon S3 trigger that retrieves metadata for the object that has been
+  created, convert it to Parquet format and push it to S3.
+Resources:
+  CsvToParquetFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      CodeUri: csv_to_parquet_function/
+      Description: >-
+        An Amazon S3 trigger that retrieves metadata for the object that has been
+        created, convert it to Parquet format and push it to S3.
+      MemorySize: 128
+      Timeout: 180
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 's3:GetObject'
+                - 's3:PutObject'
+              Resource: 'arn:aws:s3:::titanic-datalake/*'
+      Events:
+        TitanicBucketPutEvent:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: TitanicBucket
+            Events:
+              - 's3:ObjectCreated:*'
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: titanic
+                  - Name: suffix
+                    Value: .csv
+  TitanicBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: titanic-datalake
